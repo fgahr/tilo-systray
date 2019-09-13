@@ -1,0 +1,10 @@
+# Config file
+.ccls
+# Intermediate file during compilation
+.qmake.stash
+# Object files
+**/*.o
+# Output binary
+tilo-systray
+# Will be created by qmake
+Makefile
