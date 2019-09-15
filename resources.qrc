@@ -1,0 +1,8 @@
+<!DOCTYPE RCC><RCC version="1.0">
+<qresource>
+    <file>icons/idle.png</file>
+    <file>icons/busy.png</file>
+    <file>icons/fail.png</file>
+    <file>icons/disc.png</file>
+</qresource>
+</RCC>

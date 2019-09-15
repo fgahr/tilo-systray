@@ -4,6 +4,10 @@
 .qmake.stash
 # Object files
 **/*.o
+# Files created by the metaobject compiler
+**/moc_*
+# Resource files intermediate file
+qrc_resources.cpp
 # Output binary
 tilo-systray
 # Will be created by qmake

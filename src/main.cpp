@@ -1,21 +1,24 @@
-#include <QLocalSocket>
+#include <QApplication>
+#include <QMetaType>
 #include <cstdlib>
 #include <iostream>
-#include <sstream>
 #include <string>
 #include <unistd.h>
 
-QString socket_address() {
-  // TODO: Get location of /tmp dir from environment (check with Go code first).
-  return QString{"/tmp/tilo%1/notify"}.arg(getuid());
-}
+#include "tilo.hpp"
+#include "tray.hpp"
 
 int main(int argc, char *argv[]) {
-  QLocalSocket *socket = new QLocalSocket;
-  QTextStream out(stdout);
-  socket->connectToServer(socket_address(), QIODevice::ReadOnly);
-  while (socket->waitForReadyRead()) {
-    out << socket->readLine(1024);
-    out.flush();
-  }
+  QApplication app{argc, argv};
+
+  tilo::Config conf = tilo::Config::defaultConfig();
+  tray::Icon icon;
+  tilo::Listener listener{&conf};
+  icon.init();
+  icon.show();
+  QObject::connect(&listener, &tilo::Listener::notified, &icon,
+                   &tray::Icon::react);
+  listener.start();
+
+  return app.exec();
 }
