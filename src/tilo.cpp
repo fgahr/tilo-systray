@@ -1,6 +1,6 @@
+#include <QDateTime>
 #include <QJsonDocument>
 #include <QJsonObject>
-#include <QTime>
 #include <unistd.h>
 
 #include "tilo.hpp"
@@ -54,7 +54,7 @@ void Listener::receiveAndHandleData() {
   }
   auto task = json["task"].toString();
   auto sinceStr = json["since"].toString();
-  QTime since = QTime::fromString(sinceStr, Qt::ISODate);
+  QDateTime since = QDateTime::fromString(sinceStr, Qt::ISODate);
   auto state = taskStatus(task);
   emit notified(state, task, since);
 }

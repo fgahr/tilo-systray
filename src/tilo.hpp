@@ -1,12 +1,12 @@
 #ifndef TILO_SYSTRAY_TILO_H
 #define TILO_SYSTRAY_TILO_H
 
+#include <QDateTime>
 #include <QDir>
 #include <QJsonDocument>
 #include <QLocalSocket>
 #include <QMetaType>
 #include <QThread>
-#include <QTime>
 
 #include <string>
 #include <utility>
@@ -55,7 +55,8 @@ public:
 
 signals:
   /** Signal that a status update was received. */
-  void notified(const QString &state, const QString &task, const QTime &since);
+  void notified(const QString &state, const QString &task,
+                const QDateTime &since);
 
 protected:
   void run() override;

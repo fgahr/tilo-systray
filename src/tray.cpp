@@ -8,11 +8,12 @@ namespace tray {
 Icon::Icon(QObject *parent) : QSystemTrayIcon{parent} {}
 
 void Icon::init() {
-  react(tilo::state::Disconnected, "Not connected", QTime::currentTime());
+  react(tilo::state::Disconnected, "Not connected",
+        QDateTime::currentDateTime());
 }
 
 void Icon::react(const QString &state, const QString &task,
-                 const QTime &since) {
+                 const QDateTime &since) {
   if (state == tilo::state::Shutdown) {
     throw std::logic_error{"Shutdown not yet implemented"};
   }

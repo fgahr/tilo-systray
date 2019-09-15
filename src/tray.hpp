@@ -19,7 +19,7 @@ public:
 
 public slots:
   /** React to a status update. */
-  void react(const QString &state, const QString &task, const QTime &since);
+  void react(const QString &state, const QString &task, const QDateTime &since);
 
 private:
   /** Get the appropriate icon for the given application state. */

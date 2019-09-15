@@ -15,7 +15,6 @@ qmake && make
 This will place the tilo-systray program in the `bin/` directory.
 
 # TODOs
-- Fix time not being shown
 - Attempt to reconnect if the server dies or is not up yet
 - Actual error handling
 - Add menu with shutdown option, implement proper shutdown procedure
