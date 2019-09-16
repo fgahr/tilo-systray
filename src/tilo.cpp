@@ -19,18 +19,27 @@ QString Config::notificationSocket() {
 }
 
 Listener::Listener(Config *conf, QObject *parent)
-    : QThread{parent}, conf(conf) {}
+    : QThread{parent}, socket(nullptr), conf(conf) {}
 
 Listener::~Listener() {
+  requestInterruption();
   socket->close();
   delete socket;
 }
 
 void Listener::run() {
-  // TODO: Handle disconnect and shutdown.
-  socket = establishConnection();
+  while (socket == nullptr) {
+    socket = establishConnection(connectTimeoutMs);
+  }
+
   while (socket->waitForReadyRead(-1)) {
     receiveAndHandleData();
+  }
+
+  if (!isInterruptionRequested()) {
+    delete socket;
+    // NOTE: Depending on compiler optimization, a tail call may blow the stack.
+    run();
   }
 }
 
@@ -59,10 +68,15 @@ void Listener::receiveAndHandleData() {
   emit notified(state, task, since);
 }
 
-QIODevice *Listener::establishConnection() {
+QIODevice *Listener::establishConnection(uint timeout) {
   auto lsocket = new QLocalSocket;
   lsocket->connectToServer(conf->notificationSocket(), QIODevice::ReadOnly);
-  return lsocket;
+  if (lsocket->waitForConnected(timeout)) {
+    return lsocket;
+  } else {
+    delete lsocket;
+    return nullptr;
+  }
 }
 
 } // namespace tilo

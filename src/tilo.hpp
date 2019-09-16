@@ -62,11 +62,14 @@ protected:
   void run() override;
 
 private:
+  /** The socket for notification data from the server. */
   QIODevice *socket;
   /** The program configuration. This is a pointer because it may be shared. */
   Config *conf;
   /** Establish a connection to the notification socket. */
-  QIODevice *establishConnection();
+  QIODevice *establishConnection(uint timeout);
+  /** Timeout for connection attempts to the socket. */
+  uint connectTimeoutMs = 1000;
   /** Handle the received data. */
   void receiveAndHandleData();
 };
