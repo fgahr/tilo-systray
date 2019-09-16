@@ -8,6 +8,7 @@
 #include <QMetaType>
 #include <QThread>
 
+#include <memory>
 #include <string>
 #include <utility>
 
@@ -63,7 +64,7 @@ protected:
 
 private:
   /** The socket for notification data from the server. */
-  QIODevice *socket;
+  std::unique_ptr<QIODevice> socket;
   /** The program configuration. This is a pointer because it may be shared. */
   Config *conf;
   /** Establish a connection to the notification socket. */

@@ -1,4 +1,5 @@
 #include <QDateTime>
+#include <QFile>
 #include <QJsonDocument>
 #include <QJsonObject>
 #include <unistd.h>
@@ -23,23 +24,26 @@ Listener::Listener(Config *conf, QObject *parent)
 
 Listener::~Listener() {
   requestInterruption();
-  socket->close();
-  delete socket;
+  if (socket != nullptr) {
+    socket->close();
+  }
 }
 
 void Listener::run() {
-  while (socket == nullptr) {
-    socket = establishConnection(connectTimeoutMs);
-  }
+  while (!isInterruptionRequested()) {
+    while (socket == nullptr) {
+      qDebug() << "Trying to connect...";
+      socket.reset(establishConnection(connectTimeoutMs));
+    }
 
-  while (socket->waitForReadyRead(-1)) {
-    receiveAndHandleData();
-  }
+    while (socket->waitForReadyRead(-1)) {
+      receiveAndHandleData();
+    }
+    qDebug() << "Connection interrupted";
 
-  if (!isInterruptionRequested()) {
-    delete socket;
-    // NOTE: Depending on compiler optimization, a tail call may blow the stack.
-    run();
+    socket->close();
+    socket.reset();
+    emit notified(tilo::state::Disconnected, "", QDateTime::currentDateTime());
   }
 }
 
@@ -69,6 +73,14 @@ void Listener::receiveAndHandleData() {
 }
 
 QIODevice *Listener::establishConnection(uint timeout) {
+  if (!QFile::exists(conf->notificationSocket())) {
+    // TODO: Find a better way instead of sleeping. File system watcher?
+    msleep(timeout);
+    // Server is still down
+    if (!QFile::exists(conf->notificationSocket())) {
+      return nullptr;
+    }
+  }
   auto lsocket = new QLocalSocket;
   lsocket->connectToServer(conf->notificationSocket(), QIODevice::ReadOnly);
   if (lsocket->waitForConnected(timeout)) {

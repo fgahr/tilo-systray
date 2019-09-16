@@ -17,7 +17,9 @@ void Icon::react(const QString &state, const QString &task,
   if (state == tilo::state::Shutdown) {
     throw std::logic_error{"Shutdown not yet implemented"};
   }
-  auto toolTip = QString{"Now: %1\nSince: %2"}.arg(task, since.toString());
+  auto taskDescription = (state == tilo::state::Idle) ? "Idle" : task;
+  auto toolTip =
+      QString{"Now: %1\nSince: %2"}.arg(taskDescription, since.toString());
   setToolTip(toolTip);
   setIcon(getIcon(state));
 }
