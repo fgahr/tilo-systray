@@ -12,12 +12,19 @@ void Icon::init() {
         QDateTime::currentDateTime());
 }
 
+QString description(const QString &state, const QString &task) {
+  if (state == tilo::state::Idle) {
+    return "Idle";
+  } else if (state == tilo::state::Disconnected) {
+    return "Disconnected";
+  } else {
+    return task;
+  }
+}
+
 void Icon::react(const QString &state, const QString &task,
                  const QDateTime &since) {
-  if (state == tilo::state::Shutdown) {
-    throw std::logic_error{"Shutdown not yet implemented"};
-  }
-  auto taskDescription = (state == tilo::state::Idle) ? "Idle" : task;
+  auto taskDescription = description(state, task);
   auto toolTip =
       QString{"Now: %1\nSince: %2"}.arg(taskDescription, since.toString());
   setToolTip(toolTip);

@@ -15,13 +15,16 @@
 /** Namespace for all types and functions interacting with tilo. */
 namespace tilo {
 
-/** Server/application states. */
+/**
+ * Server/application states.
+ *
+ * Uses strings because an enum in a signal requires more work.
+ */
 namespace state {
 const QString Active = "Active";
 const QString Idle = "Idle";
 const QString Disconnected = "Disconnected";
 const QString Error = "Error";
-const QString Shutdown = "Shutdown";
 } // namespace state
 
 /**
