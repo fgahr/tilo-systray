@@ -64,11 +64,11 @@ protected:
 
 private:
   /** The socket for notification data from the server. */
-  std::unique_ptr<QIODevice> socket;
+  std::unique_ptr<QLocalSocket> socket;
   /** The program configuration. This is a pointer because it may be shared. */
   Config *conf;
   /** Establish a connection to the notification socket. */
-  QIODevice *establishConnection(uint timeout);
+  void establishConnection(uint timeout);
   /** Timeout for connection attempts to the socket. */
   uint connectTimeoutMs = 1000;
   /** Handle the received data. */

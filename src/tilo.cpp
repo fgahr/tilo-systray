@@ -32,14 +32,12 @@ Listener::~Listener() {
 void Listener::run() {
   while (!isInterruptionRequested()) {
     while (socket == nullptr) {
-      qDebug() << "Trying to connect...";
-      socket.reset(establishConnection(connectTimeoutMs));
+      establishConnection(connectTimeoutMs);
     }
 
     while (socket->waitForReadyRead(-1)) {
       receiveAndHandleData();
     }
-    qDebug() << "Connection interrupted";
 
     socket->close();
     socket.reset();
@@ -49,7 +47,7 @@ void Listener::run() {
 
 QString taskStatus(QString &taskName) {
   if (taskName == "--shutdown") {
-    return state::Shutdown;
+    return state::Disconnected;
   } else if (taskName == "") {
     return state::Idle;
   } else {
@@ -62,8 +60,8 @@ void Listener::receiveAndHandleData() {
   QJsonDocument jdoc = QJsonDocument::fromJson(data);
   auto json = jdoc.object();
   if (json.isEmpty() || !json.contains("task") || !json.contains("since")) {
-    // TODO: Signal error status instead.
-    throw std::logic_error{"Unexpected JSON format."};
+    emit notified(tilo::state::Error, "Error: invalid data",
+                  QDateTime::currentDateTime());
   }
   auto task = json["task"].toString();
   auto sinceStr = json["since"].toString();
@@ -72,22 +70,22 @@ void Listener::receiveAndHandleData() {
   emit notified(state, task, since);
 }
 
-QIODevice *Listener::establishConnection(uint timeout) {
+void Listener::establishConnection(uint timeout) {
+  if (socket != nullptr) {
+    return;
+  }
   if (!QFile::exists(conf->notificationSocket())) {
     // TODO: Find a better way instead of sleeping. File system watcher?
     msleep(timeout);
     // Server is still down
     if (!QFile::exists(conf->notificationSocket())) {
-      return nullptr;
+      return;
     }
   }
-  auto lsocket = new QLocalSocket;
-  lsocket->connectToServer(conf->notificationSocket(), QIODevice::ReadOnly);
-  if (lsocket->waitForConnected(timeout)) {
-    return lsocket;
-  } else {
-    delete lsocket;
-    return nullptr;
+  socket = std::make_unique<QLocalSocket>();
+  socket->connectToServer(conf->notificationSocket(), QIODevice::ReadOnly);
+  if (!socket->waitForConnected(timeout)) {
+    socket.reset();
   }
 }
 
