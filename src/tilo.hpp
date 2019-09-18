@@ -34,16 +34,17 @@ class Config {
 public:
   /** The default configuration. */
   static Config defaultConfig();
-  /** The absolute path of the notification socket. */
-  QString notificationSocket();
-  /** How long to wait for a notification at each iteration. */
-  int readTimeoutMs();
+  /** The base directory for temporary folders and files. */
+  const QDir tempBaseDir;
+  /** The temporary directory used by the server. */
+  const QString tiloDirName;
+  /** The name of the socket to connect to for notifications. */
+  const QString socketName;
+  /** The full path to the socket. */
+  QString socketPath() const;
 
 private:
-  QDir tmpDir;
-  QString ntfSock;
-  Config(QDir tmpDir, QString ntfSock)
-      : tmpDir(std::move(tmpDir)), ntfSock(std::move(ntfSock)) {}
+  Config(QDir tempDir, QString dirName, QString socketName);
 };
 
 /**
@@ -68,14 +69,18 @@ protected:
 private:
   /** The socket for notification data from the server. */
   std::unique_ptr<QLocalSocket> socket;
+  /** Timeout for connection attempts to the socket. */
+  uint connectTimeoutMillis = 1000;
   /** The program configuration. This is a pointer because it may be shared. */
   Config *conf;
   /** Establish a connection to the notification socket. */
-  void establishConnection(uint timeout);
-  /** Timeout for connection attempts to the socket. */
-  uint connectTimeoutMs = 1000;
+  void establishConnection();
   /** Handle the received data. */
   void receiveAndHandleData();
+  /** Wait for the notification socket to be created. */
+  void waitForSocket();
+  /** Whether the notification exists. */
+  bool socketExists() const;
 };
 
 } // namespace tilo

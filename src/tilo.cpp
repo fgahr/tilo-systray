@@ -9,14 +9,15 @@
 namespace tilo {
 
 Config Config::defaultConfig() {
-  QDir tmpDir = QDir::temp();
-  tmpDir.cd(QString{"tilo%1"}.arg(getuid()));
-  QString ntfSock = QString{"notify"};
-  return Config{tmpDir, ntfSock};
+  return Config{QDir::temp(), QString{"tilo%1"}.arg(getuid()), "notify"};
 }
 
-QString Config::notificationSocket() {
-  return tmpDir.absoluteFilePath(ntfSock);
+Config::Config(QDir tempDir, QString dirName, QString socketName)
+    : tempBaseDir(std::move(tempDir)), tiloDirName(std::move(dirName)),
+      socketName(std::move(socketName)) {}
+
+QString Config::socketPath() const {
+  return QDir{tempBaseDir.filePath(tiloDirName)}.absoluteFilePath(socketName);
 }
 
 Listener::Listener(Config *conf, QObject *parent)
@@ -32,7 +33,7 @@ Listener::~Listener() {
 void Listener::run() {
   while (!isInterruptionRequested()) {
     while (socket == nullptr) {
-      establishConnection(connectTimeoutMs);
+      establishConnection();
     }
 
     while (socket->waitForReadyRead(-1)) {
@@ -40,7 +41,7 @@ void Listener::run() {
     }
 
     socket->close();
-    socket.reset();
+    socket.reset(nullptr);
     emit notified(tilo::state::Disconnected, "", QDateTime::currentDateTime());
   }
 }
@@ -52,6 +53,20 @@ QString taskStatus(QString &taskName) {
     return state::Idle;
   } else {
     return state::Active;
+  }
+}
+
+void Listener::establishConnection() {
+  if (socket != nullptr) {
+    return;
+  }
+  if (!socketExists()) {
+    waitForSocket();
+  }
+  socket = std::make_unique<QLocalSocket>();
+  socket->connectToServer(conf->socketPath(), QIODevice::ReadOnly);
+  if (!socket->waitForConnected(connectTimeoutMillis)) {
+    socket.reset(nullptr);
   }
 }
 
@@ -70,23 +85,22 @@ void Listener::receiveAndHandleData() {
   emit notified(state, task, since);
 }
 
-void Listener::establishConnection(uint timeout) {
-  if (socket != nullptr) {
-    return;
-  }
-  if (!QFile::exists(conf->notificationSocket())) {
-    // TODO: Find a better way instead of sleeping. File system watcher?
-    msleep(timeout);
-    // Server is still down
-    if (!QFile::exists(conf->notificationSocket())) {
-      return;
+void Listener::waitForSocket() {
+  if (!conf->tempBaseDir.exists(conf->tiloDirName)) {
+    if (!conf->tempBaseDir.mkdir(conf->tiloDirName)) {
+      qWarning() << "Failed to create temp dir "
+                 << conf->tempBaseDir.filePath(conf->tiloDirName);
     }
   }
-  socket = std::make_unique<QLocalSocket>();
-  socket->connectToServer(conf->notificationSocket(), QIODevice::ReadOnly);
-  if (!socket->waitForConnected(timeout)) {
-    socket.reset();
+
+  while (!socketExists()) {
+    // TODO: Find way to do this without sleeping.
+    msleep(connectTimeoutMillis);
   }
+}
+
+bool Listener::socketExists() const {
+  return QFile::exists(conf->socketPath());
 }
 
 } // namespace tilo
