@@ -8,8 +8,38 @@
 
 namespace tilo {
 
+const QString Command::OPERATION_FIELD = "operation";
+const QString Command::LISTEN_OPERATION = "listen";
+
+Command::Command(QString op) : operation(std::move(op)) {}
+
+QByteArray Command::toJson() {
+  QJsonObject object{QPair<QString, QString>{Command::OPERATION_FIELD,
+                                             Command::LISTEN_OPERATION}};
+  QJsonDocument document{object};
+  return document.toJson();
+}
+
+const QString Response::STATUS_FIELD = "status";
+const QString Response::ERROR_FIELD = "error";
+
+const QString Response::SUCCESS_STATUS = "success";
+const QString Response::ERROR_STATUS = "error";
+
+Response::Response(QString status, QString error)
+    : status(std::move(status)), error(std::move(error)) {}
+
+Response Response::fromJson(QByteArray data) {
+  auto object = QJsonDocument::fromJson(data).object();
+  auto status = object[Response::STATUS_FIELD].toString();
+  auto error = object[Response::ERROR_FIELD].toString();
+  return Response{status, error};
+}
+
+bool Response::failed() { return status == Response::ERROR_STATUS; }
+
 Config Config::defaultConfig() {
-  return Config{QDir::temp(), QString{"tilo%1"}.arg(getuid()), "notify"};
+  return Config{QDir::temp(), QString{"tilo%1"}.arg(getuid()), "server"};
 }
 
 Config::Config(QDir tempDir, QString dirName, QString socketName)
@@ -34,6 +64,12 @@ void Listener::run() {
   while (!isInterruptionRequested()) {
     while (socket == nullptr) {
       establishConnection();
+    }
+
+    auto resp = initiateListening();
+    if (resp.failed()) {
+      emit notified(tilo::state::Error, "", QDateTime::currentDateTime());
+      break;
     }
 
     while (socket->waitForReadyRead(-1)) {
@@ -64,10 +100,21 @@ void Listener::establishConnection() {
     waitForSocket();
   }
   socket = std::make_unique<QLocalSocket>();
-  socket->connectToServer(conf->socketPath(), QIODevice::ReadOnly);
+  socket->connectToServer(conf->socketPath(), QIODevice::ReadWrite);
   if (!socket->waitForConnected(connectTimeoutMillis)) {
     socket.reset(nullptr);
   }
+}
+
+Response Listener::initiateListening() {
+  Command cmd{Command::LISTEN_OPERATION};
+  socket->write(cmd.toJson());
+  if (socket->waitForReadyRead(connectTimeoutMillis)) {
+    auto data = socket->readLine();
+    return Response::fromJson(data);
+  }
+  return Response{Response::ERROR_STATUS,
+                  "Failed to receive connection confirmation."};
 }
 
 void Listener::receiveAndHandleData() {

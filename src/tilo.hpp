@@ -16,16 +16,45 @@
 namespace tilo {
 
 /**
- * Server/application states.
- *
- * Uses strings because an enum in a signal requires more work.
+ * A command for the server.
  */
-namespace state {
-const QString Active = "Active";
-const QString Idle = "Idle";
-const QString Disconnected = "Disconnected";
-const QString Error = "Error";
-} // namespace state
+class Command {
+public:
+  Command(QString op);
+  /** Serialize this command as a JSON object. */
+  QByteArray toJson();
+
+  static const QString OPERATION_FIELD;
+  static const QString LISTEN_OPERATION;
+
+private:
+  /** The operation for the server to perform. */
+  QString operation;
+};
+
+/**
+ * A response from the server.
+ */
+class Response {
+public:
+  Response(QString status, QString error = "");
+  /** Whether the interaction failed. */
+  bool failed();
+  /** Deserialize raw JSON data as a Response object. */
+  static Response fromJson(QByteArray data);
+
+  static const QString STATUS_FIELD;
+  static const QString ERROR_FIELD;
+
+  static const QString SUCCESS_STATUS;
+  static const QString ERROR_STATUS;
+
+private:
+  /** The status returned from the server. */
+  QString status;
+  /** Description of any error returned by the server. */
+  QString error;
+};
 
 /**
  * The configuration for this instance.
@@ -46,6 +75,18 @@ public:
 private:
   Config(QDir tempDir, QString dirName, QString socketName);
 };
+
+/**
+ * Server/application states.
+ *
+ * Uses strings because an enum in a signal requires more work.
+ */
+namespace state {
+const QString Active = "Active";
+const QString Idle = "Idle";
+const QString Disconnected = "Disconnected";
+const QString Error = "Error";
+} // namespace state
 
 /**
  * A listener on the notification socket. Waits for status notifications and
@@ -75,6 +116,8 @@ private:
   Config *conf;
   /** Establish a connection to the notification socket. */
   void establishConnection();
+  /** Register as a listener on the server. */
+  Response initiateListening();
   /** Handle the received data. */
   void receiveAndHandleData();
   /** Wait for the notification socket to be created. */
